@@ -1,0 +1,183 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>思库 · 个人长期信息资产与决策回溯系统</title>
+    <link rel="stylesheet" href="./assets/styles.css" />
+  </head>
+  <body>
+    <div class="layout">
+      <aside class="sidebar">
+        <div class="sidebar-brand">
+          <div class="brand-block">思库</div>
+          <div class="brand-sub">专注思考，长期沉淀</div>
+        </div>
+        <nav class="sidebar-nav">
+          <a class="nav-item active" data-view="notes"><span class="icon-slot" data-icon="project"></span>笔记</a>
+          <a class="nav-item" data-view="database"><span class="icon-slot" data-icon="customer"></span>数据库</a>
+          <a class="nav-item" data-view="history"><span class="icon-slot" data-icon="meeting"></span>我的记录</a>
+          <a class="nav-item" data-view="files"><span class="icon-slot" data-icon="life"></span>文件库</a>
+        </nav>
+        <div class="sidebar-footer">
+          <div class="local-card">
+            <div class="local-title">本地存储</div>
+            <div class="local-desc">数据保存在你的设备本地进行隐私保护</div>
+            <div class="version">v1.0.0 · 2026</div>
+          </div>
+        </div>
+      </aside>
+      <main class="page">
+        <div class="topbar">
+          <div class="slogan">让每一个想法成为长期资产</div>
+          <div class="topbar-right">
+            <div class="search">
+              <input id="search-input" type="text" placeholder="搜索标题、内容或标签..." />
+            </div>
+            <button class="create-btn"><span class="plus">+</span> 新建笔记</button>
+          </div>
+        </div>
+        <div class="grad-bar"></div>
+        <div class="filters">
+          <div class="chips">
+            <button class="chip active" data-tag="全部">全部</button>
+            <button class="chip" data-tag="想法">想法</button>
+            <button class="chip" data-tag="会议">会议</button>
+            <button class="chip" data-tag="待办">待办</button>
+            <button class="chip" data-tag="决策">决策</button>
+          </div>
+          <div class="time-select">
+            <select id="time-range">
+              <option>全部时间</option>
+              <option>今天</option>
+              <option>本周</option>
+              <option>本月</option>
+            </select>
+          </div>
+        </div>
+        <div class="content" id="view-notes">
+          <div class="list">
+            <div class="list-head">共 <span id="note-count">0</span> 条记录</div>
+            <div id="note-list" class="note-list"></div>
+          </div>
+          <div class="preview">
+            <div class="empty">
+              <div class="empty-icon"></div>
+              <div class="empty-title">开始记录你的想法</div>
+              <div class="empty-sub">选择一条笔记或创建新笔记</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="content" id="view-history" style="display:none;">
+          <div class="list">
+            <div class="list-head">按时间顺序排列</div>
+            <div class="history-tabs">
+              <button class="chip active" id="tab-list">列表</button>
+              <button class="chip" id="tab-timeline">时间轴</button>
+              <button class="chip" id="tab-insights">洞察</button>
+              <button class="chip" id="tab-chains">脉络</button>
+            </div>
+            <div id="history-list" class="note-list"></div>
+            <div id="timeline-list" class="timeline-list" style="display:none;"></div>
+            <div id="insights-list" class="insights-list" style="display:none;"></div>
+            <div id="chains-list" class="note-list" style="display:none;"></div>
+          </div>
+          <div class="preview">
+            <section class="report">
+              <h2>自动生成报告</h2>
+              <div class="row">
+                <select id="report-type">
+                  <option>关键词汇总报告</option>
+                  <option>客户阶段报告</option>
+                  <option>项目复盘报告</option>
+                  <option>个人复盘报告</option>
+                  <option>手动选择整合报告</option>
+                </select>
+                <input id="report-context" type="text" placeholder="输入关键词/客户/项目（选择整合可留空）" />
+                <button id="generate-report" class="create-btn">生成</button>
+              </div>
+              <div class="row" style="margin-top:8px;">
+                <button id="select-all-history" class="chip">全选历史</button>
+                <button id="delete-selected-history" class="chip">删除已选</button>
+                <select id="bulk-category" class="chip">
+                  <option value="">按类别删除</option>
+                  <option value="测试">测试</option>
+                  <option value="会议">会议</option>
+                  <option value="待办">待办</option>
+                  <option value="决策">决策</option>
+                  <option value="想法">想法</option>
+                </select>
+                <button id="bulk-delete" class="chip">一键全选删除</button>
+              </div>
+              <div id="report-panel" class="report-panel"></div>
+            </section>
+          </div>
+        </div>
+
+        <div class="content" id="view-database" style="display:none;">
+          <div class="list">
+            <div class="list-head">数据库 · 识别后的文本</div>
+            <div class="row" style="margin-bottom:8px;">
+              <input id="db-upload" type="file" multiple />
+            </div>
+            <div id="db-list" class="note-list"></div>
+          </div>
+          <div class="preview">
+            <div class="empty">
+              <div class="empty-icon"></div>
+              <div class="empty-title">文本识别结果预览</div>
+              <div class="empty-sub">选择左侧项目查看识别文本</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="content" id="view-files" style="display:none;">
+          <div class="list">
+            <div class="list-head">文件库 · 源文件</div>
+            <div class="row" style="margin-bottom:8px;">
+              <input id="file-upload" type="file" multiple />
+            </div>
+            <div id="file-list" class="note-list"></div>
+          </div>
+          <div class="preview">
+            <div class="empty">
+              <div class="empty-icon"></div>
+              <div class="empty-title">文件预览</div>
+              <div class="empty-sub">选择左侧文件进行本地预览或下载</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="compose-page" id="view-compose" style="display:none;">
+          <div class="compose-toolbar">
+            <button class="chip active" id="compose-type"><span class="icon-slot" data-icon="bulb"></span>想法</button>
+            <button class="chip" id="compose-attach"><span class="icon-slot" data-icon="paperclip"></span>附件</button>
+            <button class="chip" id="compose-record"><span class="icon-slot" data-icon="mic"></span>录音</button>
+            <input id="compose-upload" type="file" multiple style="display:none;" />
+            <button class="create-btn" id="compose-save">保存</button>
+          </div>
+          <div class="compose-body">
+            <div id="compose-dropzone" class="dropzone">
+              <span class="icon-slot" data-icon="image"></span>
+              <span>将图片文件拖拽此处，或 <b id="dz-upload">点击上传</b></span>
+            </div>
+            <textarea class="compose-text" id="compose-text" placeholder="开始记录你的想法…"></textarea>
+            <div id="compose-evidence" class="evidence-panel"></div>
+          </div>
+        </div>
+      </main>
+    </div>
+
+    <aside id="hint-panel" class="hint-panel">
+      <div class="hint-header">你可能也需要 · 相关历史记录</div>
+      <div id="hint-list" class="hint-list"></div>
+    </aside>
+
+    <footer class="app-footer">
+      <span>统一收集 · 自动结构化 · 长期沉淀 · 可回溯、可复用</span>
+    </footer>
+
+    <script type="module" src="./assets/app.js"></script>
+  </body>
+</html>
