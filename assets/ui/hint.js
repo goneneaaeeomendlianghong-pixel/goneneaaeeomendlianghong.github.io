@@ -33,8 +33,8 @@ export class HintPanel {
       item.appendChild(title);
       item.appendChild(meta);
       item.addEventListener('click', () => {
-        const ev = new CustomEvent('hint:open-record', { detail: { id: s.id } });
-        window.dispatchEvent(ev);
+        const evNav = new CustomEvent('hint:navigate-record', { detail: { id: s.id } });
+        window.dispatchEvent(evNav);
       });
       this.listEl.appendChild(item);
     }

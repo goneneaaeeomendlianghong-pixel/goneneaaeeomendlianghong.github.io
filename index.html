@@ -4,7 +4,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>思库 · 个人长期信息资产与决策回溯系统</title>
-    <link rel="stylesheet" href="./assets/styles.css" />
+    <link rel="stylesheet" href="./assets/styles.css?v=20260211-1" />
   </head>
   <body>
     <div class="layout">
@@ -34,7 +34,7 @@
             <div class="search">
               <input id="search-input" type="text" placeholder="搜索标题、内容或标签..." />
             </div>
-            <button class="create-btn"><span class="plus">+</span> 新建笔记</button>
+            <button id="btn-new-note" class="create-btn"><span class="plus">+</span> 新建笔记</button>
           </div>
         </div>
         <div class="grad-bar"></div>
@@ -84,34 +84,11 @@
             <div id="chains-list" class="note-list" style="display:none;"></div>
           </div>
           <div class="preview">
-            <section class="report">
-              <h2>自动生成报告</h2>
-              <div class="row">
-                <select id="report-type">
-                  <option>关键词汇总报告</option>
-                  <option>客户阶段报告</option>
-                  <option>项目复盘报告</option>
-                  <option>个人复盘报告</option>
-                  <option>手动选择整合报告</option>
-                </select>
-                <input id="report-context" type="text" placeholder="输入关键词/客户/项目（选择整合可留空）" />
-                <button id="generate-report" class="create-btn">生成</button>
-              </div>
-              <div class="row" style="margin-top:8px;">
-                <button id="select-all-history" class="chip">全选历史</button>
-                <button id="delete-selected-history" class="chip">删除已选</button>
-                <select id="bulk-category" class="chip">
-                  <option value="">按类别删除</option>
-                  <option value="测试">测试</option>
-                  <option value="会议">会议</option>
-                  <option value="待办">待办</option>
-                  <option value="决策">决策</option>
-                  <option value="想法">想法</option>
-                </select>
-                <button id="bulk-delete" class="chip">一键全选删除</button>
-              </div>
-              <div id="report-panel" class="report-panel"></div>
-            </section>
+            <div class="empty">
+              <div class="empty-icon"></div>
+              <div class="empty-title">记录详情</div>
+              <div class="empty-sub">点击左侧记录查看完整内容</div>
+            </div>
           </div>
         </div>
 
@@ -153,7 +130,6 @@
           <div class="compose-toolbar">
             <button class="chip active" id="compose-type"><span class="icon-slot" data-icon="bulb"></span>想法</button>
             <button class="chip" id="compose-attach"><span class="icon-slot" data-icon="paperclip"></span>附件</button>
-            <button class="chip" id="compose-record"><span class="icon-slot" data-icon="mic"></span>录音</button>
             <input id="compose-upload" type="file" multiple style="display:none;" />
             <button class="create-btn" id="compose-save">保存</button>
           </div>
@@ -178,6 +154,7 @@
       <span>统一收集 · 自动结构化 · 长期沉淀 · 可回溯、可复用</span>
     </footer>
 
-    <script type="module" src="./assets/app.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/tesseract.js@4.0.2/dist/tesseract.min.js"></script>
+    <script type="module" src="./assets/app.js?v=20260213-1"></script>
   </body>
 </html>

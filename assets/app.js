@@ -6,7 +6,7 @@ import { generateReport } from './core/report.js';
 import { ReportView } from './ui/report.js';
 import { icon } from './ui/icon.js';
 import { setTheme, getTheme } from './theme/tokens.js';
-import { FileStore, readFileAsText } from './core/files.js';
+import { FileStore, readFileAsText, readFileAsDataURL } from './core/files.js';
 import { Modal } from './ui/modal.js';
 import { buildInsights } from './core/insights.js';
 import { buildChains } from './core/chains.js';
@@ -41,6 +41,8 @@ const $timeRange = document.getElementById('time-range');
 const $noteList = document.getElementById('note-list');
 const $noteCount = document.getElementById('note-count');
 const $viewNotes = document.getElementById('view-notes');
+const $notesEmptyTitle = document.querySelector('#view-notes .empty-title');
+const $notesEmptySub = document.querySelector('#view-notes .empty-sub');
 const $viewHistory = document.getElementById('view-history');
 const $viewDatabase = document.getElementById('view-database');
 const $viewFiles = document.getElementById('view-files');
@@ -96,6 +98,8 @@ let currentTag = '全部';
 let query = '';
 let range = '全部时间';
 let currentView = 'notes';
+ 
+let pendingDraft = null;
 
 function inRange(t) {
   if (!t) return true;
@@ -167,6 +171,7 @@ function renderHistory() {
     const card = document.createElement('div');
     card.className = 'note-card';
     card.dataset.id = r.id;
+    card.addEventListener('click', () => renderHistoryPreview(r));
     const title = document.createElement('div');
     title.className = 'note-title';
     title.textContent = r.text ? r.text.slice(0, 40) : '未命名笔记';
@@ -196,6 +201,8 @@ function renderDatabase() {
   for (const f of all) {
     const card = document.createElement('div');
     card.className = 'note-card';
+    card.dataset.id = f.id;
+    card.addEventListener('click', () => renderDbPreview(f));
     const title = document.createElement('div');
     title.className = 'note-title';
     title.textContent = f.name;
@@ -215,6 +222,24 @@ function renderDatabase() {
     card.appendChild(title);
     card.appendChild(sub);
     card.appendChild(meta);
+    const actions = document.createElement('div');
+    actions.style.marginTop = '8px';
+    const previewBtn = document.createElement('button');
+    previewBtn.className = 'create-btn';
+    previewBtn.style.height = '32px';
+    previewBtn.textContent = '预览';
+    previewBtn.addEventListener('click', (e) => { e.stopPropagation(); renderDbPreview(f); });
+    const backBtn = document.createElement('button');
+    backBtn.className = 'brand-chip';
+    backBtn.textContent = '返回';
+    backBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const panel = document.querySelector('#view-database .preview');
+      if (panel) panel.innerHTML = '<div class="empty"><div class="empty-icon"></div><div class="empty-title">文本识别结果预览</div><div class="empty-sub">选择左侧项目查看识别文本</div></div>';
+    });
+    actions.appendChild(previewBtn);
+    actions.appendChild(backBtn);
+    card.appendChild(actions);
     $dbList.appendChild(card);
   }
 }
@@ -225,6 +250,7 @@ function renderFiles() {
   for (const f of all) {
     const card = document.createElement('div');
     card.className = 'note-card';
+    card.addEventListener('click', () => renderFilePreview(f));
     const title = document.createElement('div');
     title.className = 'note-title';
     title.textContent = f.name;
@@ -244,24 +270,164 @@ function renderFiles() {
     card.appendChild(title);
     card.appendChild(sub);
     card.appendChild(meta);
+    const actions = document.createElement('div');
+    actions.style.marginTop = '8px';
+    const previewBtn = document.createElement('button');
+    previewBtn.className = 'create-btn';
+    previewBtn.style.height = '32px';
+    previewBtn.textContent = '预览';
+    previewBtn.addEventListener('click', (e) => { e.stopPropagation(); renderFilePreview(f); });
+    const backBtn = document.createElement('button');
+    backBtn.className = 'brand-chip';
+    backBtn.textContent = '返回';
+    backBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const panel = document.querySelector('#view-files .preview');
+      if (panel) panel.innerHTML = '<div class="empty"><div class="empty-icon"></div><div class="empty-title">文件预览</div><div class="empty-sub">选择左侧文件进行本地预览或下载</div></div>';
+    });
     if (f.blobUrl) {
-      const btn = document.createElement('button');
-      btn.className = 'create-btn';
-      btn.style.height = '32px';
-      btn.textContent = '下载/预览';
-      btn.addEventListener('click', () => {
+      const dl = document.createElement('button');
+      dl.className = 'brand-chip';
+      dl.textContent = '下载';
+      dl.addEventListener('click', (e) => {
+        e.stopPropagation();
         const a = document.createElement('a');
         a.href = f.blobUrl;
         a.download = f.name;
         a.target = '_blank';
         a.click();
       });
-      card.appendChild(btn);
+      actions.appendChild(dl);
     }
+    actions.appendChild(previewBtn);
+    actions.appendChild(backBtn);
+    card.appendChild(actions);
     $fileList.appendChild(card);
   }
 }
 
+function renderDbPreview(f) {
+  const panel = document.querySelector('#view-database .preview');
+  if (!panel) return;
+  panel.innerHTML = '';
+ 
+  const body = document.createElement('div');
+  body.className = 'preview-body';
+  const title = document.createElement('div');
+  title.className = 'note-title';
+  title.textContent = f.name;
+  const url = f.blobUrl || f.dataUrl || '';
+  const isImage = (/\.(png|jpg|jpeg|gif|webp|bmp|svg)$/i.test(f.name) || /^image\//.test(f.type));
+  const isTextType = /^(text\/|application\/json|application\/xml|text\/html)/.test(f.type);
+  const isTextExt = /\.(txt|md|log|csv|json|xml|html|rtf)$/i.test(f.name);
+  const content = document.createElement('div');
+  content.className = 'preview-text';
+  content.textContent = f.contentText || '暂未识别到文本';
+  body.appendChild(title);
+  body.appendChild(content);
+  if (url && !(isImage || isTextType || isTextExt)) {
+    const viewer = document.createElement('div');
+    viewer.className = 'viewer';
+    if (/^audio\//.test(f.type)) {
+      const audio = document.createElement('audio');
+      audio.controls = true;
+      audio.src = url;
+      viewer.appendChild(audio);
+    } else if (/^video\//.test(f.type)) {
+      const video = document.createElement('video');
+      video.controls = true;
+      video.src = url;
+      video.style.maxWidth = '100%';
+      viewer.appendChild(video);
+    } else if (/\.pdf$/i.test(f.name) || f.type === 'application/pdf') {
+      const embed = document.createElement('embed');
+      embed.src = url;
+      embed.type = 'application/pdf';
+      embed.style.width = '100%';
+      embed.style.minHeight = '320px';
+      viewer.appendChild(embed);
+    }
+    body.appendChild(viewer);
+  }
+  panel.appendChild(body);
+}
+
+function renderHistoryPreview(r) {
+  const panel = document.querySelector('#view-history .preview');
+  if (!panel) return;
+  panel.innerHTML = '';
+  const body = document.createElement('div');
+  body.className = 'preview-body';
+  const title = document.createElement('div');
+  title.className = 'note-title';
+  title.textContent = r.text ? r.text.slice(0, 120) : '未命名笔记';
+  const meta = document.createElement('div');
+  meta.className = 'note-meta';
+  const tag = document.createElement('span');
+  tag.className = 'tag';
+  tag.textContent = (r.scene || '工作') + ' · ' + (r.intent || '记录');
+  const time = document.createElement('span');
+  time.className = 'time';
+  time.textContent = r.time ? new Date(r.time).toLocaleString() : '未设时间';
+  meta.appendChild(tag);
+  meta.appendChild(time);
+  const content = document.createElement('div');
+  content.className = 'preview-text';
+  content.textContent = r.text || '';
+  body.appendChild(title);
+  body.appendChild(meta);
+  body.appendChild(content);
+  panel.appendChild(body);
+}
+
+function renderFilePreview(f) {
+  const panel = document.querySelector('#view-files .preview');
+  if (!panel) return;
+  panel.innerHTML = '';
+ 
+  const body = document.createElement('div');
+  body.className = 'preview-body';
+  const title = document.createElement('div');
+  title.className = 'note-title';
+  title.textContent = f.name;
+  body.appendChild(title);
+  const viewer = document.createElement('div');
+  viewer.className = 'viewer';
+  const url = f.blobUrl || f.dataUrl || '';
+  if (/\.(png|jpg|jpeg|gif|webp|bmp|svg)$/i.test(f.name) || /^image\//.test(f.type)) {
+    const img = document.createElement('img');
+    img.src = url;
+    img.style.maxWidth = '100%';
+    img.style.borderRadius = '8px';
+    viewer.appendChild(img);
+  } else if (/^audio\//.test(f.type)) {
+    const audio = document.createElement('audio');
+    audio.controls = true;
+    audio.src = url;
+    viewer.appendChild(audio);
+  } else if (/^video\//.test(f.type)) {
+    const video = document.createElement('video');
+    video.controls = true;
+    video.src = url;
+    video.style.maxWidth = '100%';
+    viewer.appendChild(video);
+  } else if (/\.pdf$/i.test(f.name) || f.type === 'application/pdf') {
+    const embed = document.createElement('embed');
+    embed.src = url;
+    embed.type = 'application/pdf';
+    embed.style.width = '100%';
+    embed.style.minHeight = '320px';
+    viewer.appendChild(embed);
+  } else {
+    const link = document.createElement('a');
+    link.href = url;
+    link.target = '_blank';
+    link.textContent = '在新窗口打开预览/下载';
+    viewer.appendChild(link);
+  }
+  body.appendChild(viewer);
+  panel.appendChild(body);
+}
 function typeOfRecord(r) {
   const text = r.text || '';
   const tags = r.tags || [];
@@ -382,7 +548,7 @@ function setView(view) {
   if (view === 'history') { renderHistory(); renderTimeline(); renderInsights(); renderChains(); }
   if (view === 'database') renderDatabase();
   if (view === 'files') renderFiles();
-  if (view !== 'compose') hint.hide();
+  if (view !== 'compose') { hint.hide(); }
 }
 setView('notes');
 
@@ -413,39 +579,81 @@ if ($tabList && $tabTimeline && $tabInsights) {
 if ($dbUpload) {
   $dbUpload.addEventListener('change', async () => {
     const filesArr = Array.from($dbUpload.files || []);
+    let last = null;
     for (const file of filesArr) {
       const blobUrl = URL.createObjectURL(file);
+      const dataUrl = await readFileAsDataURL(file);
       let contentText = '';
-      if (/text|csv|json/.test(file.type) || /\.(txt|csv|json)$/i.test(file.name)) {
-        contentText = await readFileAsText(file);
-      } else {
-        contentText = '';
+      const isTextType = /^(text\/|application\/json|application\/xml|text\/html)/.test(file.type);
+      const isTextExt = /\.(txt|md|log|csv|json|xml|html?|rtf)$/i.test(file.name);
+      const isImage = (/^image\//.test(file.type) || /\.(png|jpg|jpeg|gif|webp|bmp|svg)$/i.test(file.name));
+      if (isTextType || isTextExt) {
+        const raw = await readFileAsText(file);
+        if (/^text\/html/.test(file.type) || /\.html?$/i.test(file.name)) {
+          const div = document.createElement('div');
+          div.innerHTML = raw;
+          contentText = (div.textContent || '').trim();
+        } else if (/\.rtf$/i.test(file.name)) {
+          let s = String(raw || '');
+          s = s.replace(/\\par[d]?/g, '\n');
+          s = s.replace(/\\'[0-9a-fA-F]{2}/g, (m) => {
+            const hex = m.slice(2);
+            return String.fromCharCode(parseInt(hex, 16));
+          });
+          s = s.replace(/\\[a-z]+-?\d*/gi, '');
+          s = s.replace(/[{}]/g, '');
+          s = s.replace(/\n{3,}/g, '\n\n');
+          contentText = s.trim();
+        } else {
+          contentText = raw;
+        }
       }
-      files.addFile({ name: file.name, type: file.type, size: file.size, contentText, blobUrl });
+      const rec = files.addFile({ name: file.name, type: file.type, size: file.size, contentText, blobUrl, dataUrl });
+      last = rec;
+      if (isImage && typeof window.Tesseract !== 'undefined') {
+        try {
+          const result = await window.Tesseract.recognize(dataUrl || blobUrl, 'chi_sim', { logger: null });
+          const text = String(result?.data?.text || '').trim();
+          if (text) {
+            files.updateFile(rec.id, { contentText: text });
+            last = files.getAll().find(x => x.id === rec.id) || rec;
+          }
+        } catch {}
+      }
     }
+    setView('database');
     renderDatabase();
-    renderFiles();
     $dbUpload.value = '';
+    if (last) renderDbPreview(last);
   });
 }
-
 if ($fileUpload) {
   $fileUpload.addEventListener('change', async () => {
     const filesArr = Array.from($fileUpload.files || []);
+    let last = null;
     for (const file of filesArr) {
       const blobUrl = URL.createObjectURL(file);
-      files.addFile({ name: file.name, type: file.type, size: file.size, contentText: '', blobUrl });
+      const dataUrl = await readFileAsDataURL(file);
+      const rec = files.addFile({ name: file.name, type: file.type, size: file.size, contentText: '', blobUrl, dataUrl });
+      last = rec;
     }
+    setView('files');
     renderFiles();
     $fileUpload.value = '';
+    if (last) renderFilePreview(last);
   });
 }
+ 
 
-const createBtn = document.querySelector('.create-btn');
-if (createBtn) {
-  createBtn.addEventListener('click', () => {
-    setView('compose');
-  });
+const $btnNewNote = document.getElementById('btn-new-note');
+if ($btnNewNote) {
+  $btnNewNote.addEventListener('click', () => setView('compose'));
+}
+if ($notesEmptyTitle) {
+  $notesEmptyTitle.addEventListener('click', () => setView('compose'));
+}
+if ($notesEmptySub) {
+  $notesEmptySub.addEventListener('click', () => setView('compose'));
 }
 
 let composeTag = '想法';
@@ -465,7 +673,9 @@ if ($composeAttach && $composeUpload) {
     for (const f of arr) {
       const blobUrl = URL.createObjectURL(f);
       let contentText = '';
-      if (/text|csv|json/.test(f.type) || /\.(txt|csv|json)$/i.test(f.name)) {
+      const isTextType = /^(text\/|application\/json|application\/xml|text\/html)/.test(f.type);
+      const isTextExt = /\.(txt|md|log|csv|json|xml|html|rtf)$/i.test(f.name);
+      if (isTextType || isTextExt) {
         contentText = await readFileAsText(f);
       }
       files.addFile({ name: f.name, type: f.type, size: f.size, contentText, blobUrl });
@@ -491,6 +701,19 @@ if ($composeRecord) {
         const blob = new Blob(composeChunks, { type: 'audio/webm' });
         const url = URL.createObjectURL(blob);
         files.addFile({ name: `录音-${Date.now()}.webm`, type: 'audio/webm', size: blob.size, contentText: '', blobUrl: url });
+        const panel = document.getElementById('compose-evidence');
+        if (panel) {
+          const item = document.createElement('div');
+          item.className = 'evidence-item';
+          const title = document.createElement('div');
+          title.textContent = '录音附件';
+          const audio = document.createElement('audio');
+          audio.controls = true;
+          audio.src = url;
+          item.appendChild(title);
+          item.appendChild(audio);
+          panel.appendChild(item);
+        }
       };
       composeRecorder.start();
       $composeRecord.classList.add('active');
@@ -531,10 +754,89 @@ if ($composeText) {
     const text = $composeText.value.trim();
     const features = extractFeatures({ text, tags: [composeTag] });
     if (currentView !== 'compose') { hint.hide(); return; }
-    if (!features.keywords || features.keywords.length === 0) { hint.hide(); return; }
-    const suggestions = buildSuggestions(features, store.getAll());
-    if (suggestions.length > 0) hint.render(suggestions, { title: '你之前记录过类似内容' });
-    else hint.hide();
+    if (text.length === 0) { hint.hide(); return; }
+    const combined = [
+      ...store.getAll(),
+      ...files.getAll()
+        .filter(f => (f.contentText || '').trim().length > 0)
+        .map(f => ({ id: `db-${f.id}`, text: f.contentText || '', scene: '数据库', time: f.ts, tags: [f.type], name: f.name }))
+    ];
+    let suggestions = buildSuggestions({ text }, combined);
+    if (suggestions.length > 0) {
+      hint.render(suggestions, { title: '你之前记录过类似内容' });
+    } else {
+      const han = (text.match(/[\u4e00-\u9fff]/g) || []);
+      if (han.length >= 2) {
+        const q = han.slice(-2).join('');
+        const strong = [];
+        for (const r of combined) {
+          const rt = (r.text || '') + ' ' + ((r.tags || []).join(' ')) + ' ' + (r.name || '');
+          if (rt.includes(q)) {
+            strong.push({
+              id: r.id,
+              title: rt.slice(0, 60),
+              score: 1,
+              scene: r.scene,
+              time: r.time,
+              tags: r.tags,
+            });
+          }
+        }
+        if (strong.length > 0) {
+          hint.render(strong.slice(0,8), { title: '你之前记录过类似内容' });
+        } else {
+          const q2 = text;
+          if (q2.length >= 2) {
+            const any = [];
+            for (const r of combined) {
+              const rt = (r.text || '') + ' ' + ((r.tags || []).join(' ')) + ' ' + (r.name || '');
+              if (rt.toLowerCase().includes(q2.toLowerCase())) {
+                any.push({
+                  id: r.id,
+                  title: rt.slice(0, 60),
+                  score: 1,
+                  scene: r.scene,
+                  time: r.time,
+                  tags: r.tags,
+                });
+              }
+            }
+            if (any.length > 0) {
+              hint.render(any.slice(0,8), { title: '你之前记录过类似内容' });
+            } else {
+              hint.hide();
+            }
+          } else {
+            hint.hide();
+          }
+        }
+      } else {
+        const q2 = text;
+        if (q2.length >= 2) {
+          const any = [];
+          for (const r of combined) {
+            const rt = (r.text || '') + ' ' + ((r.tags || []).join(' ')) + ' ' + (r.name || '');
+            if (rt.toLowerCase().includes(q2.toLowerCase())) {
+              any.push({
+                id: r.id,
+                title: rt.slice(0, 60),
+                score: 1,
+                scene: r.scene,
+                time: r.time,
+                tags: r.tags,
+              });
+            }
+          }
+          if (any.length > 0) {
+            hint.render(any.slice(0,8), { title: '你之前记录过类似内容' });
+          } else {
+            hint.hide();
+          }
+        } else {
+          hint.hide();
+        }
+      }
+    }
     repetitionHint(features);
   });
 }
@@ -569,7 +871,88 @@ document.querySelectorAll('.chip').forEach(ch => {
     renderNotes();
   });
 });
-$searchInput.addEventListener('input', () => { query = $searchInput.value.trim(); renderNotes(); });
+$searchInput.addEventListener('click', () => {
+  $searchInput.focus();
+  const val = $searchInput.value;
+  $searchInput.setSelectionRange(val.length, val.length);
+});
+$searchInput.addEventListener('input', () => {
+  const val = $searchInput.value.trim();
+  query = val;
+  if (currentView === 'notes') {
+    renderNotes();
+  }
+  if (val.length === 0) { hint.hide(); return; }
+  const combined = [
+    ...store.getAll(),
+    ...files.getAll()
+      .filter(f => (f.contentText || '').trim().length > 0)
+      .map(f => ({ id: `db-${f.id}`, text: f.contentText || '', scene: '数据库', time: f.ts, tags: [f.type], name: f.name }))
+  ];
+  let suggestions = buildSuggestions({ text: val }, combined);
+  if (suggestions.length === 0) {
+    const han = (val.match(/[\u4e00-\u9fff]/g) || []);
+    if (han.length >= 2) {
+      const q = han.slice(-2).join('');
+      const strong = [];
+      for (const r of combined) {
+        const rt = (r.text || '') + ' ' + ((r.tags || []).join(' ')) + ' ' + (r.name || '');
+        if (rt.includes(q)) {
+          strong.push({
+            id: r.id,
+            title: rt.slice(0, 60),
+            score: 1,
+            scene: r.scene,
+            time: r.time,
+            tags: r.tags,
+          });
+        }
+      }
+      suggestions = strong.slice(0, 8);
+      if (suggestions.length === 0) {
+        const q2 = val;
+        if (q2.length >= 2) {
+          const any = [];
+          for (const r of combined) {
+            const rt = (r.text || '') + ' ' + ((r.tags || []).join(' ')) + ' ' + (r.name || '');
+            if (rt.toLowerCase().includes(q2.toLowerCase())) {
+              any.push({
+                id: r.id,
+                title: rt.slice(0, 60),
+                score: 1,
+                scene: r.scene,
+                time: r.time,
+                tags: r.tags,
+              });
+            }
+          }
+          suggestions = any.slice(0,8);
+        }
+      }
+    } else {
+      const q2 = val;
+      if (q2.length >= 2) {
+        const any = [];
+        for (const r of combined) {
+          const rt = (r.text || '') + ' ' + ((r.tags || []).join(' ')) + ' ' + (r.name || '');
+          if (rt.toLowerCase().includes(q2.toLowerCase())) {
+            any.push({
+              id: r.id,
+              title: rt.slice(0, 60),
+              score: 1,
+              scene: r.scene,
+              time: r.time,
+              tags: r.tags,
+            });
+          }
+        }
+        suggestions = any.slice(0,8);
+      }
+    }
+  }
+  if (suggestions.length > 0) hint.render(suggestions, { title: '你之前记录过类似内容' });
+  else hint.hide();
+});
 $timeRange.addEventListener('change', () => { range = $timeRange.value; renderNotes(); });
 
 if ($text) {
@@ -695,6 +1078,47 @@ window.addEventListener('hint:open-record', (e) => {
   panel.appendChild(item);
 });
 
+window.addEventListener('hint:navigate-record', (e) => {
+  const id = e.detail.id;
+  pendingDraft = $composeText ? $composeText.value : '';
+  if (id.startsWith('db-')) {
+    const realId = id.slice(3);
+    setView('database');
+    renderDatabase();
+    const el = document.querySelector(`#view-database .note-card[data-id="${realId}"]`);
+    if (el) {
+      el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      el.classList.add('selected');
+    }
+  } else {
+    const r = store.getById(id);
+    setView('history');
+    renderHistory();
+    const el = document.querySelector(`#view-history .note-card[data-id="${id}"]`);
+    if (el) {
+      document.querySelectorAll('.note-card').forEach(x => x.classList.remove('selected'));
+      el.classList.add('selected');
+      el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+  }
+  let overlay = document.getElementById('btn-return-compose');
+  if (!overlay) {
+    overlay = document.createElement('button');
+    overlay.id = 'btn-return-compose';
+    overlay.className = 'return-overlay';
+    overlay.textContent = '返回继续编辑';
+    overlay.addEventListener('click', () => {
+      setView('compose');
+      if ($composeText && pendingDraft != null) {
+        $composeText.value = pendingDraft;
+        $composeText.dispatchEvent(new Event('input'));
+      }
+      pendingDraft = null;
+      overlay.remove();
+    });
+    document.body.appendChild(overlay);
+  }
+});
 if ($applyTheme && $colorAccent && $colorAccent2 && $colorBg && $colorPanel && $colorText && $colorMuted) {
   $applyTheme.addEventListener('click', () => {
     const tokens = {

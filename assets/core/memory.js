@@ -38,6 +38,20 @@ export class MemoryStore {
     this._save();
     return id;
   }
+  removeById(id) {
+    const i = this.records.findIndex(r => r.id === id);
+    if (i >= 0) {
+      this.records.splice(i, 1);
+      this._save();
+      return true;
+    }
+    return false;
+  }
+  removeByIds(ids) {
+    const set = new Set(ids);
+    this.records = this.records.filter(r => !set.has(r.id));
+    this._save();
+  }
   inferIntent(rec) {
     const s = `${rec.text} ${(rec.tags||[]).join(' ')}`;
     if (/决策|结论|确认|通过|依据|原因/.test(s)) return '决策依据';
