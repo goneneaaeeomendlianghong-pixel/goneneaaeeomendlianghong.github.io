@@ -46,10 +46,13 @@ const $notesEmptySub = document.querySelector('#view-notes .empty-sub');
 const $viewHistory = document.getElementById('view-history');
 const $viewDatabase = document.getElementById('view-database');
 const $viewFiles = document.getElementById('view-files');
+const $viewTrash = document.getElementById('view-trash');
 const $historyList = document.getElementById('history-list');
 const $timelineList = document.getElementById('timeline-list');
 const $insightsList = document.getElementById('insights-list');
 const $chainsList = document.getElementById('chains-list');
+const $trashList = document.getElementById('trash-list');
+const $trashEmpty = document.getElementById('trash-empty');
 const $tabList = document.getElementById('tab-list');
 const $tabTimeline = document.getElementById('tab-timeline');
 const $tabInsights = document.getElementById('tab-insights');
@@ -160,18 +163,43 @@ function renderNotes() {
 }
 renderNotes();
 
+if ($searchInput) {
+  $searchInput.addEventListener('input', () => {
+    query = ($searchInput.value || '').trim();
+    if (currentView === 'notes') renderNotes();
+    if (currentView === 'history') renderHistory();
+    if (currentView === 'database') renderDatabase();
+    if (currentView === 'files') renderFiles();
+  });
+}
+
 function renderHistory() {
   const all = store.getAll().slice().sort((a, b) => {
     const ta = a.time ? new Date(a.time).getTime() : 0;
     const tb = b.time ? new Date(b.time).getTime() : 0;
-    return ta - tb;
+    return tb - ta;
+  });
+  const filtered = all.filter(r => {
+    if (!query) return true;
+    const hay = `${r.text} ${(r.tags||[]).join(' ')}`.toLowerCase();
+    return hay.includes(query.toLowerCase());
   });
   $historyList.innerHTML = '';
-  for (const r of all) {
+  for (const r of filtered) {
     const card = document.createElement('div');
     card.className = 'note-card';
     card.dataset.id = r.id;
     card.addEventListener('click', () => renderHistoryPreview(r));
+    const actions = document.createElement('div');
+    actions.style.marginTop = '6px';
+    const delBtn = document.createElement('button');
+    delBtn.className = 'chip';
+    delBtn.textContent = '删除';
+    delBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      store.trashById(r.id);
+      renderHistory();
+    });
     const title = document.createElement('div');
     title.className = 'note-title';
     title.textContent = r.text ? r.text.slice(0, 40) : '未命名笔记';
@@ -191,14 +219,21 @@ function renderHistory() {
     card.appendChild(title);
     card.appendChild(sub);
     card.appendChild(meta);
+    card.appendChild(actions);
+    actions.appendChild(delBtn);
     $historyList.appendChild(card);
   }
 }
 
 function renderDatabase() {
   const all = files.getAll();
+  const filtered = all.filter(f => {
+    if (!query) return true;
+    const hay = `${f.name} ${f.type} ${f.contentText || ''}`.toLowerCase();
+    return hay.includes(query.toLowerCase());
+  });
   $dbList.innerHTML = '';
-  for (const f of all) {
+  for (const f of filtered) {
     const card = document.createElement('div');
     card.className = 'note-card';
     card.dataset.id = f.id;
@@ -237,8 +272,18 @@ function renderDatabase() {
       const panel = document.querySelector('#view-database .preview');
       if (panel) panel.innerHTML = '<div class="empty"><div class="empty-icon"></div><div class="empty-title">文本识别结果预览</div><div class="empty-sub">选择左侧项目查看识别文本</div></div>';
     });
+    const delBtn = document.createElement('button');
+    delBtn.className = 'chip';
+    delBtn.textContent = '删除';
+    delBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      files.trashById(f.id);
+      renderDatabase();
+      if (currentView === 'trash') renderTrash();
+    });
     actions.appendChild(previewBtn);
     actions.appendChild(backBtn);
+    actions.appendChild(delBtn);
     card.appendChild(actions);
     $dbList.appendChild(card);
   }
@@ -246,8 +291,13 @@ function renderDatabase() {
 
 function renderFiles() {
   const all = files.getAll();
+  const filtered = all.filter(f => {
+    if (!query) return true;
+    const hay = `${f.name} ${f.type}`.toLowerCase();
+    return hay.includes(query.toLowerCase());
+  });
   $fileList.innerHTML = '';
-  for (const f of all) {
+  for (const f of filtered) {
     const card = document.createElement('div');
     card.className = 'note-card';
     card.addEventListener('click', () => renderFilePreview(f));
@@ -299,8 +349,18 @@ function renderFiles() {
       });
       actions.appendChild(dl);
     }
+    const delBtn = document.createElement('button');
+    delBtn.className = 'chip';
+    delBtn.textContent = '删除';
+    delBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      files.trashById(f.id);
+      renderFiles();
+      if (currentView === 'trash') renderTrash();
+    });
     actions.appendChild(previewBtn);
     actions.appendChild(backBtn);
+    actions.appendChild(delBtn);
     card.appendChild(actions);
     $fileList.appendChild(card);
   }
@@ -349,6 +409,18 @@ function renderDbPreview(f) {
     }
     body.appendChild(viewer);
   }
+  const actions = document.createElement('div');
+  actions.className = 'evidence-actions';
+  const delBtn = document.createElement('button');
+  delBtn.className = 'chip';
+  delBtn.textContent = '删除';
+  delBtn.addEventListener('click', () => {
+    files.trashById(f.id);
+    renderDatabase();
+    setView('trash');
+  });
+  actions.appendChild(delBtn);
+  body.appendChild(actions);
   panel.appendChild(body);
 }
 
@@ -374,10 +446,77 @@ function renderHistoryPreview(r) {
   const content = document.createElement('div');
   content.className = 'preview-text';
   content.textContent = r.text || '';
+  const actions = document.createElement('div');
+  actions.style.marginTop = '8px';
+  const delBtn = document.createElement('button');
+  delBtn.className = 'chip';
+  delBtn.textContent = '删除';
+  delBtn.addEventListener('click', () => {
+    store.trashById(r.id);
+    renderHistory();
+    panel.innerHTML = '<div class=\"empty\"><div class=\"empty-icon\"></div><div class=\"empty-title\">记录详情</div><div class=\"empty-sub\">点击左侧记录查看完整内容</div></div>';
+  });
   body.appendChild(title);
   body.appendChild(meta);
   body.appendChild(content);
+  body.appendChild(actions);
+  actions.appendChild(delBtn);
   panel.appendChild(body);
+}
+
+function renderTrash() {
+  if (!$trashList) return;
+  $trashList.innerHTML = '';
+  const recs = store.getTrash();
+  const ffs = files.getTrash();
+  const addCard = (item, kind) => {
+    const card = document.createElement('div');
+    card.className = 'note-card';
+    const title = document.createElement('div');
+    title.className = 'note-title';
+    title.textContent = kind === 'record' ? (item.text ? item.text.slice(0,80) : '未命名笔记') : item.name;
+    const sub = document.createElement('div');
+    sub.className = 'note-sub';
+    sub.textContent = kind === 'record' ? (item.tags||[]).join('、') : (item.type || '文件');
+    const meta = document.createElement('div');
+    meta.className = 'note-meta';
+    const tag = document.createElement('span');
+    tag.className = 'tag';
+    tag.textContent = kind === 'record' ? '笔记/记录' : '文件';
+    const time = document.createElement('span');
+    time.className = 'time';
+    time.textContent = item.deletedAt ? new Date(item.deletedAt).toLocaleString() : '';
+    meta.appendChild(tag);
+    meta.appendChild(time);
+    const actions = document.createElement('div');
+    actions.style.marginTop = '8px';
+    const restore = document.createElement('button');
+    restore.className = 'create-btn';
+    restore.style.height = '32px';
+    restore.textContent = '还原';
+    restore.addEventListener('click', () => {
+      if (kind === 'record') store.restoreById(item.id);
+      else files.restoreById(item.id);
+      renderTrash();
+    });
+    const purge = document.createElement('button');
+    purge.className = 'chip';
+    purge.textContent = '彻底删除';
+    purge.addEventListener('click', () => {
+      if (kind === 'record') store.purgeById(item.id);
+      else files.purgeById(item.id);
+      renderTrash();
+    });
+    actions.appendChild(restore);
+    actions.appendChild(purge);
+    card.appendChild(title);
+    card.appendChild(sub);
+    card.appendChild(meta);
+    card.appendChild(actions);
+    $trashList.appendChild(card);
+  };
+  recs.forEach(r => addCard(r, 'record'));
+  ffs.forEach(f => addCard(f, 'file'));
 }
 
 function renderFilePreview(f) {
@@ -426,7 +565,28 @@ function renderFilePreview(f) {
     viewer.appendChild(link);
   }
   body.appendChild(viewer);
+  const actions = document.createElement('div');
+  actions.className = 'evidence-actions';
+  const delBtn = document.createElement('button');
+  delBtn.className = 'chip';
+  delBtn.textContent = '删除';
+  delBtn.addEventListener('click', () => {
+    files.trashById(f.id);
+    renderFiles();
+    setView('trash');
+  });
+  actions.appendChild(delBtn);
+  body.appendChild(actions);
   panel.appendChild(body);
+}
+
+if ($trashEmpty) {
+  $trashEmpty.addEventListener('click', () => {
+    if (!confirm('确认清空废纸篓？此操作不可恢复。')) return;
+    store.emptyTrash();
+    files.emptyTrash();
+    renderTrash();
+  });
 }
 function typeOfRecord(r) {
   const text = r.text || '';
@@ -542,15 +702,17 @@ function setView(view) {
   $viewHistory.style.display = view === 'history' ? '' : 'none';
   $viewDatabase.style.display = view === 'database' ? '' : 'none';
   $viewFiles.style.display = view === 'files' ? '' : 'none';
+  if ($viewTrash) $viewTrash.style.display = view === 'trash' ? '' : 'none';
   $viewCompose.style.display = view === 'compose' ? '' : 'none';
   document.querySelectorAll('.sidebar .nav-item').forEach(it => it.classList.toggle('active', it.getAttribute('data-view') === view));
   if (view === 'notes') renderNotes();
   if (view === 'history') { renderHistory(); renderTimeline(); renderInsights(); renderChains(); }
   if (view === 'database') renderDatabase();
   if (view === 'files') renderFiles();
+  if (view === 'trash') renderTrash();
   if (view !== 'compose') { hint.hide(); }
 }
-setView('notes');
+setView('history');
 
 document.querySelectorAll('.sidebar .nav-item').forEach(it => {
   it.addEventListener('click', () => {

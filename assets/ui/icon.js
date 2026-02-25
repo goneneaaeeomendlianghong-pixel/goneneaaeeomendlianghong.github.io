@@ -24,6 +24,7 @@ export function icon(name, size = 16) {
     paperclip: 'M7 7a5 5 0 0 1 8.66-3.54l4.24 4.24a5 5 0 0 1-7.07 7.07L8.83 10.99',
     mic: 'M12 14a4 4 0 0 0 4-4V6a4 4 0 0 0-8 0v4a4 4 0 0 0 4 4zm-6-4h2a6 6 0 0 0 12 0h2a8 8 0 0 1-16 0z'
   };
+  map.trash = 'M3 6h18v2H3V6zm2 2h14l-1.5 12.5a2 2 0 0 1-2 1.5H8.5a2 2 0 0 1-2-1.5L5 8zm3-4h8l1 2H7l1-2zm2 6v8h2v-8h-2zm4 0v8h2v-8h-2zm-8 0v8h2v-8H9z';
   path.setAttribute('d', map[name] || 'M4 4h16v16H4z');
   svg.appendChild(path);
   return svg;

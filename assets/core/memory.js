@@ -15,7 +15,7 @@ export class MemoryStore {
     localStorage.setItem(this.key, JSON.stringify(this.records));
   }
   getAll() {
-    return [...this.records].sort((a, b) => {
+    return this.records.filter(r => !r.deleted).slice().sort((a, b) => {
       const ta = a.time ? new Date(a.time).getTime() : 0;
       const tb = b.time ? new Date(b.time).getTime() : 0;
       return tb - ta;
@@ -37,6 +37,36 @@ export class MemoryStore {
     this.records.push(norm);
     this._save();
     return id;
+  }
+  getTrash() {
+    return this.records.filter(r => r.deleted).slice().sort((a,b)=> (b.deletedAt||0)-(a.deletedAt||0));
+  }
+  trashById(id) {
+    const r = this.records.find(x => x.id === id);
+    if (r && !r.deleted) {
+      r.deleted = true;
+      r.deletedAt = Date.now();
+      this._save();
+    }
+  }
+  restoreById(id) {
+    const r = this.records.find(x => x.id === id);
+    if (r && r.deleted) {
+      r.deleted = false;
+      r.deletedAt = null;
+      this._save();
+    }
+  }
+  purgeById(id) {
+    const idx = this.records.findIndex(x => x.id === id);
+    if (idx >= 0) {
+      this.records.splice(idx, 1);
+      this._save();
+    }
+  }
+  emptyTrash() {
+    this.records = this.records.filter(x => !x.deleted);
+    this._save();
   }
   removeById(id) {
     const i = this.records.findIndex(r => r.id === id);

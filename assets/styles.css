@@ -20,10 +20,10 @@
   --version-text: #9ca3af;
 }
 * { box-sizing: border-box; }
-html, body { height: 100%; }
+html, body { height: 100%; overflow: hidden; }
 body { margin: 0; background: var(--bg); color: var(--text); font: 14px/1.6 Inter, -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif; }
-.layout { display: grid; grid-template-columns: 240px 1fr; min-height: 100vh; }
-.sidebar { background: var(--sidebar-bg); border-right: 1px solid var(--border); display: flex; flex-direction: column; }
+.layout { display: grid; grid-template-columns: 240px 1fr; height: 100vh; }
+.sidebar { background: var(--sidebar-bg); border-right: 1px solid var(--border); display: flex; flex-direction: column; position: sticky; top: 0; height: 100vh; overflow: hidden; }
 .sidebar-brand { padding: 20px 16px; }
 .brand-block { background: var(--grad-top); color: #fff; border-radius: 12px; padding: 16px; font-weight: 700; letter-spacing: 0.2em; text-align: center; }
 .brand-sub { color: var(--chip-unselected-text); font-size: 12px; text-align: center; margin-top: 8px; }
@@ -37,7 +37,7 @@ body { margin: 0; background: var(--bg); color: var(--text); font: 14px/1.6 Inte
 .local-desc { color: var(--badge-text); font-size: 12px; margin-top: 4px; }
 .version { color: var(--version-text); font-size: 12px; margin-top: 6px; }
 
-.page { padding: 24px; background: var(--sidebar-bg); }
+.page { padding: 24px; background: var(--sidebar-bg); height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
 .topbar { height: 64px; display: flex; align-items: center; justify-content: space-between; gap: 12px; }
 .slogan { background: var(--grad-top); -webkit-background-clip: text; background-clip: text; color: transparent; font-weight: 700; }
 .topbar-right { display: flex; align-items: center; gap: 12px; }
@@ -59,7 +59,8 @@ body { margin: 0; background: var(--bg); color: var(--text); font: 14px/1.6 Inte
 .chip.disabled { opacity: 0.5; pointer-events: none; }
 .time-select select { height: 40px; padding: 0 12px; border-radius: 8px; border: 1px solid var(--border); }
 
-.content { display: grid; grid-template-columns: 360px 1fr; gap: 20px; margin-top: 16px; }
+.content { flex: 1; min-height: 0; display: grid; grid-template-columns: 360px 1fr; gap: 20px; margin-top: 16px; }
+.list, .preview { overflow: auto; min-height: 0; }
 .list-head { color: var(--muted); margin-bottom: 8px; }
 .note-list { display: flex; flex-direction: column; gap: 10px; }
 .note-card { width: 360px; height: 120px; background: #fff; border: 1px solid var(--border); border-radius: 12px; padding: 16px; box-shadow: var(--shadow-card); }

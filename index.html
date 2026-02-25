@@ -14,17 +14,13 @@
           <div class="brand-sub">专注思考，长期沉淀</div>
         </div>
         <nav class="sidebar-nav">
-          <a class="nav-item active" data-view="notes"><span class="icon-slot" data-icon="project"></span>笔记</a>
+          <a class="nav-item" data-view="notes"><span class="icon-slot" data-icon="project"></span>笔记</a>
           <a class="nav-item" data-view="database"><span class="icon-slot" data-icon="customer"></span>数据库</a>
-          <a class="nav-item" data-view="history"><span class="icon-slot" data-icon="meeting"></span>我的记录</a>
+          <a class="nav-item active" data-view="history"><span class="icon-slot" data-icon="meeting"></span>我的记录</a>
           <a class="nav-item" data-view="files"><span class="icon-slot" data-icon="life"></span>文件库</a>
         </nav>
         <div class="sidebar-footer">
-          <div class="local-card">
-            <div class="local-title">本地存储</div>
-            <div class="local-desc">数据保存在你的设备本地进行隐私保护</div>
-            <div class="version">v1.0.0 · 2026</div>
-          </div>
+          <a class="nav-item" id="open-trash" data-view="trash"><span aria-hidden="true" style="margin-right:6px">🗑</span>废纸篓</a>
         </div>
       </aside>
       <main class="page">
@@ -38,7 +34,7 @@
           </div>
         </div>
         <div class="grad-bar"></div>
-        <div class="filters">
+        <div class="filters" style="display:none;">
           <div class="chips">
             <button class="chip active" data-tag="全部">全部</button>
             <button class="chip" data-tag="想法">想法</button>
@@ -72,12 +68,6 @@
         <div class="content" id="view-history" style="display:none;">
           <div class="list">
             <div class="list-head">按时间顺序排列</div>
-            <div class="history-tabs">
-              <button class="chip active" id="tab-list">列表</button>
-              <button class="chip" id="tab-timeline">时间轴</button>
-              <button class="chip" id="tab-insights">洞察</button>
-              <button class="chip" id="tab-chains">脉络</button>
-            </div>
             <div id="history-list" class="note-list"></div>
             <div id="timeline-list" class="timeline-list" style="display:none;"></div>
             <div id="insights-list" class="insights-list" style="display:none;"></div>
@@ -134,12 +124,21 @@
             <button class="create-btn" id="compose-save">保存</button>
           </div>
           <div class="compose-body">
-            <div id="compose-dropzone" class="dropzone">
-              <span class="icon-slot" data-icon="image"></span>
-              <span>将图片文件拖拽此处，或 <b id="dz-upload">点击上传</b></span>
-            </div>
             <textarea class="compose-text" id="compose-text" placeholder="开始记录你的想法…"></textarea>
             <div id="compose-evidence" class="evidence-panel"></div>
+          </div>
+        </div>
+        <div class="content" id="view-trash" style="display:none;">
+          <div class="list">
+            <div class="list-head">废纸篓 <button id="trash-empty" class="chip">清空废纸篓</button></div>
+            <div id="trash-list" class="note-list"></div>
+          </div>
+          <div class="preview">
+            <div class="empty">
+              <div class="empty-icon"></div>
+              <div class="empty-title">已移至废纸篓</div>
+              <div class="empty-sub">选择左侧项目进行还原或彻底删除</div>
+            </div>
           </div>
         </div>
       </main>
