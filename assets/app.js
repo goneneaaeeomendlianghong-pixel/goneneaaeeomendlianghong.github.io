@@ -119,8 +119,141 @@ const $setFrequency = document.getElementById('set-frequency');
 const $setExportJson = document.getElementById('set-export-json');
 const $setClear = document.getElementById('set-clear');
 
-// Seed demo data for first run
-store.seedDemoIfEmpty();
+function ensureSiteSnapshot() {
+  try {
+    const locked = localStorage.getItem('siku_site_snapshot_v1') === 'true';
+    if (locked) return;
+    const rec = [];
+    const mkId = (n) => `snap-${n}`;
+    const toISO = (s) => {
+      const t = new Date(s.replace(' ', 'T'));
+      return isNaN(t.getTime()) ? new Date().toISOString() : t.toISOString();
+    };
+    // 已解决决策（来自演示数据）
+    const solved = [
+      {
+        id: mkId(1),
+        title: "迭代排期紧张，是否要先上线风控模块，延后结算模块？",
+        text: "优先上线风控，结算延后1周。｜风控涉及资金安全，是核心红线；结算开发未完成，强行上线风险更高。",
+        tags: ["项目迭代", "决策", "报告"],
+        scene: "项目迭代",
+        intent: "决策依据",
+        question: "迭代排期紧张，是否要先上线风控模块，延后结算模块？",
+        conclusion: "优先上线风控，结算延后1周。",
+        reason: "风控涉及资金安全，是核心红线；结算开发未完成，强行上线风险更高。",
+        action: "先判断安全优先级 > 功能完整性。",
+        status: "已解决",
+        important: true,
+        time: toISO("2026-02-20 14:30:00"),
+      },
+      {
+        id: mkId(2),
+        title: "客户要求增加自定义导出格式，是否接受？",
+        text: "暂时不接，先统一导出逻辑。｜自定义格式会增加维护成本，当前产品核心是结构化与复用，不是格式兼容。",
+        tags: ["客户需求处理", "决策", "报告"],
+        scene: "客户需求处理",
+        intent: "决策依据",
+        question: "客户要求增加自定义导出格式，是否接受？",
+        conclusion: "暂时不接，先统一导出逻辑。",
+        reason: "自定义格式会增加维护成本，当前产品核心是结构化与复用，不是格式兼容。",
+        action: "需求必须对齐产品核心定位，不做边缘功能。",
+        status: "已解决",
+        important: true,
+        time: toISO("2026-02-21 10:15:00"),
+      },
+      {
+        id: mkId(3),
+        title: "之前做笔记工具，用户留存低，为什么？",
+        text: "只记录不提醒，信息无法长期利用。｜用户记完就忘，找不到、想不起、用不上，最后变成闲置工具。",
+        tags: ["踩坑总结", "决策", "报告"],
+        scene: "踩坑总结",
+        intent: "决策依据",
+        question: "之前做笔记工具，用户留存低，为什么？",
+        conclusion: "只记录不提醒，信息无法长期利用。",
+        reason: "用户记完就忘，找不到、想不起、用不上，最后变成闲置工具。",
+        action: "所有记录必须支持：自动关联、主动提醒、可生成报告。",
+        status: "已解决",
+        important: true,
+        time: toISO("2026-02-22 16:40:00"),
+      },
+      {
+        id: mkId(4),
+        title: "产品到底是笔记，还是决策助手？",
+        text: "不是笔记，是信息长期利用工具。核心：记录 → 结构化 → 回溯 → 提醒 → 复用。｜笔记只解决“存”，不解决“用”；我要解决：信息记下来，能被反复使用。",
+        tags: ["产品定位", "决策", "报告"],
+        scene: "产品定位",
+        intent: "决策依据",
+        question: "产品到底是笔记，还是决策助手？",
+        conclusion: "不是笔记，是信息长期利用工具。",
+        reason: "笔记只解决“存”，不解决“用”；我要解决：信息记下来，能被反复使用。",
+        action: "所有功能围绕“长期复用”设计，不做纯记录功能。",
+        status: "已解决",
+        important: true,
+        time: toISO("2026-02-23 09:25:00"),
+      }
+    ];
+    // 待处理决策（用于工作台“待处理决策”展示）
+    const pending = [
+      {
+        id: mkId(5),
+        title: "登录超时策略是否需要二次确认？",
+        text: "考虑安全与体验的权衡，待讨论",
+        tags: ["策略", "登录", "安全"],
+        scene: "策略讨论",
+        intent: "决策依据",
+        question: "是否需要在登录超时后进行二次确认？",
+        conclusion: "",
+        reason: "",
+        action: "",
+        status: "待思考",
+        important: false,
+        time: toISO("2026-02-24 15:00:00"),
+      },
+      {
+        id: mkId(6),
+        title: "数据导出速度慢的优化方案",
+        text: "评估分批导出与异步通知的可行性",
+        tags: ["性能", "导出", "优化"],
+        scene: "项目迭代",
+        intent: "决策依据",
+        question: "如何在不影响用户体验的前提下优化导出速度？",
+        conclusion: "",
+        reason: "",
+        action: "",
+        status: "处理中",
+        important: true,
+        time: toISO("2026-02-25 11:20:00"),
+      }
+    ];
+    const records = [...solved, ...pending].map(x => ({
+      id: x.id,
+      text: x.text,
+      title: x.title || '',
+      tags: Array.from(new Set(x.tags || [])),
+      time: x.time,
+      createdAt: x.time,
+      updatedAt: x.time,
+      scene: x.scene,
+      intent: x.intent,
+      relatedIds: [],
+      question: x.question || '',
+      conclusion: x.conclusion || '',
+      reason: x.reason || '',
+      action: x.action || '',
+      status: x.status || '未标记',
+      important: !!x.important,
+      supplements: [],
+      revisions: 0,
+    }));
+    localStorage.setItem('siku_records', JSON.stringify(records));
+    localStorage.setItem('siku_site_snapshot_v1', 'true');
+    // 覆盖内存中的记录
+    store.records = records;
+  } catch {}
+}
+
+// 固定站点数据快照（首次加载）
+ensureSiteSnapshot();
 hint.hide();
 setTheme();
 
@@ -2306,6 +2439,10 @@ const DEMO_REPORT_DATA = {
 
 function ensureDemoReport() {
   try {
+    if (localStorage.getItem('siku_site_snapshot_v1') === 'true') {
+      renderDemoReportPage();
+      return;
+    }
     const flag = localStorage.getItem('siku_demo_report_seeded_v1');
     if (!flag) {
       for (const d of DEMO_REPORT_DATA.decision_records) {
