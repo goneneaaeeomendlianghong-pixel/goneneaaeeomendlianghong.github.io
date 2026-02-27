@@ -29,14 +29,100 @@ export class MemoryStore {
     const norm = {
       id,
       text: rec.text,
+      title: rec.title || '',
       tags: Array.from(new Set(rec.tags || [])),
       time: rec.time || new Date().toISOString(),
+      createdAt: rec.createdAt || new Date().toISOString(),
+      updatedAt: rec.updatedAt || new Date().toISOString(),
       scene: rec.scene || this.inferScene(rec),
       intent: rec.intent || this.inferIntent(rec),
+      relatedIds: Array.from(new Set(rec.relatedIds || [])),
+      question: rec.question || '',
+      conclusion: rec.conclusion || '',
+      reason: rec.reason || '',
+      action: rec.action || '',
+      status: rec.status || '未标记',
+      important: !!rec.important,
+      supplements: Array.isArray(rec.supplements) ? rec.supplements : [],
+      revisions: rec.revisions || 0,
     };
     this.records.push(norm);
     this._save();
     return id;
+  }
+  updateById(id, patch) {
+    const r = this.records.find(x => x.id === id);
+    if (!r) return false;
+    Object.assign(r, patch || {});
+    r.updatedAt = new Date().toISOString();
+    r.revisions = (r.revisions || 0) + 1;
+    this._save();
+    return true;
+  }
+  addSupplement(id, text) {
+    const r = this.records.find(x => x.id === id);
+    if (!r) return false;
+    if (!Array.isArray(r.supplements)) r.supplements = [];
+    r.supplements.push({ text, time: new Date().toISOString() });
+    r.updatedAt = new Date().toISOString();
+    r.revisions = (r.revisions || 0) + 1;
+    this._save();
+    return true;
+  }
+  toggleImportant(id) {
+    const r = this.records.find(x => x.id === id);
+    if (!r) return false;
+    r.important = !r.important;
+    r.updatedAt = new Date().toISOString();
+    r.revisions = (r.revisions || 0) + 1;
+    this._save();
+    return r.important;
+  }
+  setStatus(id, status) {
+    const r = this.records.find(x => x.id === id);
+    if (!r) return false;
+    r.status = status;
+    r.updatedAt = new Date().toISOString();
+    r.revisions = (r.revisions || 0) + 1;
+    this._save();
+    return true;
+  }
+  renameScene(oldName, newName) {
+    if (!oldName || !newName || oldName === newName) return 0;
+    let c = 0;
+    this.records.forEach(r => {
+      if (r.scene === oldName) { r.scene = newName; c++; r.updatedAt = new Date().toISOString(); r.revisions = (r.revisions||0)+1; }
+    });
+    this._save();
+    return c;
+  }
+  mergeKeywords(from, to) {
+    if (!from || !to || from === to) return 0;
+    let c = 0;
+    this.records.forEach(r => {
+      const tags = new Set(r.tags || []);
+      if (tags.has(from)) {
+        tags.delete(from);
+        tags.add(to);
+        r.tags = Array.from(tags);
+        c++;
+        r.updatedAt = new Date().toISOString();
+        r.revisions = (r.revisions||0)+1;
+      }
+    });
+    this._save();
+    return c;
+  }
+  deleteKeyword(kw) {
+    if (!kw) return 0;
+    let c = 0;
+    this.records.forEach(r => {
+      const before = r.tags ? r.tags.length : 0;
+      r.tags = (r.tags || []).filter(t => t !== kw);
+      if (r.tags.length !== before) { c++; r.updatedAt = new Date().toISOString(); r.revisions = (r.revisions||0)+1; }
+    });
+    this._save();
+    return c;
   }
   getTrash() {
     return this.records.filter(r => r.deleted).slice().sort((a,b)=> (b.deletedAt||0)-(a.deletedAt||0));

@@ -14,10 +14,14 @@
           <div class="brand-sub">专注思考，长期沉淀</div>
         </div>
         <nav class="sidebar-nav">
+          <a class="nav-item active" data-view="dashboard"><span class="icon-slot" data-icon="bulb"></span>工作台</a>
+          <a class="nav-item" data-view="history"><span class="icon-slot" data-icon="meeting"></span>我的记录</a>
           <a class="nav-item" data-view="notes"><span class="icon-slot" data-icon="project"></span>笔记</a>
-          <a class="nav-item" data-view="database"><span class="icon-slot" data-icon="customer"></span>数据库</a>
-          <a class="nav-item active" data-view="history"><span class="icon-slot" data-icon="meeting"></span>我的记录</a>
+          
+          <a class="nav-item" data-view="keywords"><span class="icon-slot" data-icon="tag"></span>关键词</a>
+          
           <a class="nav-item" data-view="files"><span class="icon-slot" data-icon="life"></span>文件库</a>
+          <a class="nav-item" data-view="database"><span class="icon-slot" data-icon="customer"></span>数据库</a>
         </nav>
         <div class="sidebar-footer">
           <a class="nav-item" id="open-trash" data-view="trash"><span aria-hidden="true" style="margin-right:6px">🗑</span>废纸篓</a>
@@ -61,6 +65,40 @@
               <div class="empty-icon"></div>
               <div class="empty-title">开始记录你的想法</div>
               <div class="empty-sub">选择一条笔记或创建新笔记</div>
+            </div>
+          </div>
+        </div>
+        <div class="content" id="view-dashboard">
+          <div class="list">
+            <div class="list-head">今日智能提醒</div>
+            <div id="dash-reminders" class="note-list"></div>
+            <div class="list-head" style="margin-top:16px;">我的决策场景</div>
+            <div id="dash-scenes" class="chips"></div>
+            <div class="list-head" style="margin-top:16px;">待处理决策</div>
+            <div id="dash-todo" class="note-list"></div>
+            <div class="list-head" style="margin-top:16px;">已解决决策</div>
+            <div id="dash-solved" class="note-list"></div>
+            <div class="list-head" style="margin-top:16px;">我的关键词</div>
+            <div id="dash-keywords" class="chips"></div>
+            
+          </div>
+          <div class="preview">
+            <div class="empty">
+              <div class="empty-icon"></div>
+              <div class="empty-title">快速新建</div>
+              <div class="empty-sub">点击下方按钮开始一条新的决策记录</div>
+              <div style="margin-top:12px;"><button id="dash-new" class="create-btn"><span class="plus">+</span> 新建记录</button></div>
+            </div>
+          </div>
+        </div>
+        <div class="content" id="view-report" style="display:none;">
+          <div class="list">
+            <div class="list-head">决策记录（演示）</div>
+            <div id="report-list" class="note-list"></div>
+          </div>
+          <div class="preview">
+            <div class="viewer">
+              <div id="report-output" class="note-list"></div>
             </div>
           </div>
         </div>
@@ -121,13 +159,44 @@
             <button class="chip active" id="compose-type"><span class="icon-slot" data-icon="bulb"></span>想法</button>
             <button class="chip" id="compose-attach"><span class="icon-slot" data-icon="paperclip"></span>附件</button>
             <input id="compose-upload" type="file" multiple style="display:none;" />
+            <button class="brand-chip" id="compose-ai">AI生成摘要</button>
             <button class="create-btn" id="compose-save">保存</button>
           </div>
           <div class="compose-body">
-            <textarea class="compose-text" id="compose-text" placeholder="开始记录你的想法…"></textarea>
+            <div class="row" style="gap:8px; margin-bottom:8px;">
+              <input id="compose-title" class="input" placeholder="问题/主题（必填）" />
+              <input id="compose-scene" class="input" list="scene-list" placeholder="决策场景（必填，可自定义）" />
+              <datalist id="scene-list"></datalist>
+            </div>
+            <div id="compose-related-panel" class="evidence-panel" style="display:none;">
+              <div class="evidence-title">你之前思考过类似问题 ↓</div>
+              <div id="compose-related-list"></div>
+            </div>
+            <textarea class="compose-text" id="compose-text" placeholder="我遇到的问题：&#10;我的思考/结论：&#10;我为什么这么想：&#10;下次再遇到类似情况，我应该："></textarea>
             <div id="compose-evidence" class="evidence-panel"></div>
           </div>
         </div>
+        
+        <div class="content" id="view-keywords" style="display:none;">
+          <div class="list">
+            <div class="list-head">我的关键词</div>
+            <div class="row" style="gap:8px; margin-bottom:8px;">
+              <button id="kw-rename" class="chip">重命名</button>
+              <button id="kw-merge" class="chip">合并</button>
+              <button id="kw-delete" class="chip">删除</button>
+            </div>
+            <div id="kw-list" class="chips"></div>
+          </div>
+          <div class="preview">
+            <div class="empty">
+              <div class="empty-icon"></div>
+              <div class="empty-title">相关记录</div>
+              <div class="empty-sub">点击左侧关键词查看历史思考</div>
+            </div>
+            <div id="kw-related" class="note-list"></div>
+          </div>
+        </div>
+        
         <div class="content" id="view-trash" style="display:none;">
           <div class="list">
             <div class="list-head">废纸篓 <button id="trash-empty" class="chip">清空废纸篓</button></div>
@@ -152,6 +221,7 @@
     <footer class="app-footer">
       <span>统一收集 · 自动结构化 · 长期沉淀 · 可回溯、可复用</span>
     </footer>
+    <div id="toast" class="toast" style="display:none;"></div>
 
     <script src="https://cdn.jsdelivr.net/npm/tesseract.js@4.0.2/dist/tesseract.min.js"></script>
     <script type="module" src="./assets/app.js?v=20260213-1"></script>
